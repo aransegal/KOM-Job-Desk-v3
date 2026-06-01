@@ -16,14 +16,14 @@ export default function Layout() {
         <Sidebar onClose={() => setOpen(false)} />
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden flex items-center h-14 gap-3 px-4 bg-white border-b border-border shadow-sm">
-          <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
+        <div className="lg:hidden flex items-center justify-center h-14 px-4 bg-white border-b border-border shadow-sm">
+          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className="absolute left-2">
             <Menu className="h-5 w-5" />
           </Button>
           <img
             src="https://media.base44.com/images/public/user_69979ae63826daa68837a1ce/c695ce0a1_logo53.png"
             alt="KOM Job Desk"
-            className="h-8"
+            className="h-32"
           />
         </div>
         <main className="flex-1 overflow-auto p-4 md:p-6">
