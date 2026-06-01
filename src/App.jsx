@@ -18,6 +18,7 @@ import JobDetail from './pages/JobDetail';
 import Schedule from './pages/Schedule';
 import VendorPortal from './pages/VendorPortal';
 import VendorJobAction from './pages/VendorJobAction';
+import InviteUser from './pages/InviteUser';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -56,6 +57,7 @@ const AuthenticatedApp = () => {
         <Route path="/schedule" element={<Schedule />} />
         <Route path="/vendor-portal" element={<VendorPortal />} />
         <Route path="/vendor-job/:id" element={<VendorJobAction />} />
+        <Route path="/invite-user" element={<InviteUser />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

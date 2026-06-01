@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { base44 } from '@/api/base44Client';
-import { LayoutDashboard, Briefcase, CalendarDays, HardHat, Users, Calendar, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, Briefcase, CalendarDays, HardHat, Users, Calendar, LogOut, X, UserPlus } from 'lucide-react';
 
 const ADMIN_NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { path: '/schedule', label: 'Schedule', icon: CalendarDays },
   { path: '/vendors', label: 'Vendors', icon: HardHat },
   { path: '/customers', label: 'Customers', icon: Users },
+  { path: '/invite-user', label: 'Invite User', icon: UserPlus },
 ];
 
 const VENDOR_NAV = [
