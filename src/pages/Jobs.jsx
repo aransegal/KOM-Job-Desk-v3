@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import StatusBadge from '@/components/StatusBadge';
-import { Plus, Search, Calendar, Zap, Filter } from 'lucide-react';
+import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EMPTY_FORM = { title: '', description: '', customer_id: '', vendor_id: '', scheduled_date: '', scheduled_time: '', is_on_demand: false, week_start_date: '' };
@@ -31,6 +31,18 @@ export default function Jobs() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+
+  const handleSort = (key) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+
+  const SortIcon = ({ col }) => {
+    if (sortKey !== col) return <ChevronUp className="h-3 w-3 opacity-30" />;
+    return sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+  };
 
   const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
 
@@ -59,6 +71,16 @@ export default function Jobs() {
      customerMap[j.customer_id]?.name?.toLowerCase().includes(search.toLowerCase()) ||
      vendorMap[j.vendor_id]?.name?.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    let aVal = '', bVal = '';
+    if (sortKey === 'title') { aVal = a.title || ''; bVal = b.title || ''; }
+    else if (sortKey === 'customer') { aVal = customerMap[a.customer_id]?.name || ''; bVal = customerMap[b.customer_id]?.name || ''; }
+    else if (sortKey === 'vendor') { aVal = vendorMap[a.vendor_id]?.name || ''; bVal = vendorMap[b.vendor_id]?.name || ''; }
+    else if (sortKey === 'date') { aVal = a.scheduled_date || ''; bVal = b.scheduled_date || ''; }
+    else if (sortKey === 'status') { aVal = a.status || ''; bVal = b.status || ''; }
+    return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+  }) : filtered;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -107,15 +129,15 @@ export default function Jobs() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/30">
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Job</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden md:table-cell">Customer</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden lg:table-cell">Vendor</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden sm:table-cell">Date</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Status</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('title')}><span className="flex items-center gap-1">Job <SortIcon col="title" /></span></th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden md:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('customer')}><span className="flex items-center gap-1">Customer <SortIcon col="customer" /></span></th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden lg:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('vendor')}><span className="flex items-center gap-1">Vendor <SortIcon col="vendor" /></span></th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden sm:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('date')}><span className="flex items-center gap-1">Date <SortIcon col="date" /></span></th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('status')}><span className="flex items-center gap-1">Status <SortIcon col="status" /></span></th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((job, i) => (
+              {sorted.map((job, i) => (
                 <tr
                   key={job.id}
                   className={`border-b border-border hover:bg-secondary/30 cursor-pointer transition-colors ${i % 2 === 0 ? '' : 'bg-secondary/10'}`}
