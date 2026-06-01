@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { LogIn } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { base44 } from '@/api/base44Client';
 import { LayoutDashboard, Briefcase, CalendarDays, HardHat, Users, Calendar, LogOut, X } from 'lucide-react';
@@ -61,23 +62,36 @@ export default function Sidebar({ onClose }) {
 
       {/* User info */}
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
-               style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}>
-            {user?.full_name?.[0]?.toUpperCase() || '?'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{user?.full_name || 'User'}</p>
-            <p className="text-xs text-muted-foreground capitalize">{role}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => base44.auth.logout()}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm transition-colors w-full px-1"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+        {!user ? (
+          <button
+            onClick={() => base44.auth.redirectToLogin()}
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
+          >
+            <LogIn className="h-4 w-4" />
+            Log In
+          </button>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+                   style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}>
+                {user?.full_name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{user?.full_name || 'User'}</p>
+                <p className="text-xs text-muted-foreground capitalize">{role}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => base44.auth.logout()}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm transition-colors w-full px-1"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
