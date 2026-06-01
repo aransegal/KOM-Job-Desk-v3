@@ -16,7 +16,7 @@ export default function Dashboard() {
   const { data: user } = useCurrentUser();
 
   useEffect(() => {
-    if (user?.role === 'vendor') navigate('/vendor-portal');
+    if (user && user.role !== 'admin' && user.role !== 'manager') navigate('/vendor-portal');
   }, [user, navigate]);
 
   // Real-time job notifications for admin/manager
