@@ -17,8 +17,8 @@ export default function Layout() {
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="lg:hidden flex items-center justify-center py-3 px-4 bg-white border-b border-border shadow-sm relative">
-          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className="absolute left-2 text-xl">
-            <Menu className="h-5 w-5" />
+          <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className="absolute left-2 w-18 h-18 p-3">
+            <Menu className="h-10 w-10" />
           </Button>
           <img
             src="https://media.base44.com/images/public/user_69979ae63826daa68837a1ce/c695ce0a1_logo53.png"
