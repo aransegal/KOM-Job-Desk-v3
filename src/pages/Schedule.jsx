@@ -62,6 +62,7 @@ export default function Schedule() {
   });
 
   const activeVendors = vendors.filter(v => v.status === 'active');
+  const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]));
 
   const handleAddJob = (e) => {
     e.preventDefault();
@@ -93,84 +94,59 @@ export default function Schedule() {
         </div>
       </div>
 
-      {/* Vendor rows */}
-      <div className="space-y-4">
-        {activeVendors.map(vendor => {
-          const vendorWeekJobs = weekJobs.filter(j => j.vendor_id === vendor.id);
-          const schedule = schedules.find(s => s.vendor_id === vendor.id && s.week_start_date === weekStartStr);
-
-          return (
-            <div key={vendor.id} className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/20">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                       style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}>
-                    {vendor.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{vendor.name}</p>
-                    <p className="text-xs text-muted-foreground">{vendor.category}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {schedule && (
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      schedule.status === 'approved' ? 'bg-green-100 text-green-700' :
-                      schedule.status === 'sent' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>{schedule.status}</span>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => { setSelectedVendorId(vendor.id); setForm(f => ({ ...f, vendor_id: vendor.id, scheduled_date: format(weekDays[0], 'yyyy-MM-dd') })); setDialog(true); }}>
-                    <Plus className="h-3.5 w-3.5 mr-1" />Add Job
-                  </Button>
-                </div>
+      {/* Day-based calendar grid */}
+      <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+        {/* Header: day columns */}
+        <div className="grid grid-cols-7 border-b border-border">
+          {weekDays.map((day, i) => {
+            const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+            return (
+              <div key={i} className={`px-3 py-3 text-center border-r border-border last:border-r-0 ${isToday ? 'bg-primary/10' : 'bg-secondary/20'}`}>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{DAYS[i]}</p>
+                <p className={`text-lg font-bold mt-0.5 ${isToday ? 'text-primary' : 'text-foreground'}`}>{format(day, 'd')}</p>
+                <p className="text-xs text-muted-foreground">{format(day, 'MMM')}</p>
               </div>
+            );
+          })}
+        </div>
 
-              {/* Day grid */}
-              <div className="grid grid-cols-7 border-b border-border">
-                {weekDays.map((day, i) => (
-                  <div key={i} className={`px-2 py-1.5 text-center border-r border-border last:border-r-0 ${
-                    format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'bg-primary/5' : ''
-                  }`}>
-                    <p className="text-xs font-medium text-muted-foreground">{DAYS[i]}</p>
-                    <p className="text-xs text-foreground">{format(day, 'd')}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7">
-                {weekDays.map((day, i) => {
-                  const dayStr = format(day, 'yyyy-MM-dd');
-                  const dayJobs = vendorWeekJobs.filter(j => j.scheduled_date === dayStr);
+        {/* Job cells per day */}
+        <div className="grid grid-cols-7 min-h-64">
+          {weekDays.map((day, i) => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            const dayJobs = weekJobs.filter(j => j.scheduled_date === dayStr);
+            const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
+            return (
+              <div key={i} className={`border-r border-border last:border-r-0 p-2 space-y-1.5 ${isToday ? 'bg-primary/5' : ''}`}>
+                {dayJobs.map(job => {
+                  const vendor = vendorMap[job.vendor_id];
                   return (
-                    <div key={i} className="border-r border-border last:border-r-0 p-2 min-h-16">
-                      {dayJobs.map(job => (
-                        <div
-                          key={job.id}
-                          className="text-xs p-1.5 rounded mb-1 cursor-pointer hover:opacity-80 transition-opacity text-white"
-                          style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
-                          onClick={() => navigate(`/jobs/${job.id}`)}
-                        >
-                          <p className="font-medium truncate">{job.title}</p>
-                          {customerMap[job.customer_id] && <p className="opacity-80 truncate">{customerMap[job.customer_id].name}</p>}
-                        </div>
-                      ))}
+                    <div
+                      key={job.id}
+                      className="p-2 rounded-lg cursor-pointer hover:opacity-90 transition-opacity text-white text-xs"
+                      style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
+                      <p className="font-semibold truncate leading-tight">{job.title}</p>
+                      {vendor && <p className="opacity-80 truncate mt-0.5">👷 {vendor.name}</p>}
+                      {job.scheduled_time && <p className="opacity-70 mt-0.5">🕐 {job.scheduled_time}</p>}
                     </div>
                   );
                 })}
+                {dayJobs.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center pt-4 opacity-50">—</p>
+                )}
               </div>
-              {vendorWeekJobs.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">No jobs scheduled this week</p>
-              )}
-            </div>
-          );
-        })}
-        {activeVendors.length === 0 && (
-          <div className="bg-white rounded-xl border border-border p-12 text-center">
-            <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">No active vendors. Add vendors first.</p>
-          </div>
-        )}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Add job button */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={() => { setForm(f => ({ ...f, scheduled_date: weekStartStr })); setDialog(true); }}>
+          <Plus className="h-4 w-4 mr-2" />Add Job
+        </Button>
       </div>
 
       <Dialog open={dialog} onOpenChange={() => setDialog(false)}>
