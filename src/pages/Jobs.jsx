@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import StatusBadge from '@/components/StatusBadge';
-import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EMPTY_FORM = { title: '', description: '', customer_id: '', vendor_id: '', scheduled_date: '', scheduled_time: '', is_on_demand: false, week_start_date: '' };
@@ -32,6 +32,10 @@ export default function Jobs() {
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [sortKey, setSortKey] = useState(null);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState('all');
+  const [vendorFilter, setVendorFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('');
   const [sortDir, setSortDir] = useState('asc');
 
   const handleSort = (key) => {
@@ -67,6 +71,9 @@ export default function Jobs() {
 
   const filtered = myJobs.filter(j =>
     (statusFilter === 'all' || j.status === statusFilter) &&
+    (customerFilter === 'all' || j.customer_id === customerFilter) &&
+    (vendorFilter === 'all' || j.vendor_id === vendorFilter) &&
+    (!dateFilter || j.scheduled_date === dateFilter) &&
     (j.title?.toLowerCase().includes(search.toLowerCase()) ||
      customerMap[j.customer_id]?.name?.toLowerCase().includes(search.toLowerCase()) ||
      vendorMap[j.vendor_id]?.name?.toLowerCase().includes(search.toLowerCase()))
@@ -120,7 +127,59 @@ export default function Jobs() {
             ))}
           </SelectContent>
         </Select>
+        <Button variant="outline" className="gap-2" onClick={() => setShowMoreFilters(v => !v)}>
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="sm:inline">More Filters</span>
+          {(customerFilter !== 'all' || vendorFilter !== 'all' || dateFilter) && (
+            <span className="bg-primary text-primary-foreground text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {[customerFilter !== 'all', vendorFilter !== 'all', !!dateFilter].filter(Boolean).length}
+            </span>
+          )}
+        </Button>
       </div>
+
+      {showMoreFilters && (
+        <div className="bg-white rounded-xl border border-border p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Customer</label>
+            <Select value={customerFilter} onValueChange={setCustomerFilter}>
+              <SelectTrigger><SelectValue placeholder="All Customers" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Customers</SelectItem>
+                {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendor</label>
+            <Select value={vendorFilter} onValueChange={setVendorFilter}>
+              <SelectTrigger><SelectValue placeholder="All Vendors" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Vendors</SelectItem>
+                {vendors.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Date</label>
+            <div className="relative">
+              <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} />
+              {dateFilter && (
+                <button onClick={() => setDateFilter('')} className="absolute right-8 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+          {(customerFilter !== 'all' || vendorFilter !== 'all' || dateFilter) && (
+            <div className="sm:col-span-3 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => { setCustomerFilter('all'); setVendorFilter('all'); setDateFilter(''); }}>
+                <X className="h-3.5 w-3.5 mr-1" />Clear filters
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>
