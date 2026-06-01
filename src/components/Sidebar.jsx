@@ -74,7 +74,7 @@ export default function Sidebar({ onClose }) {
           </button>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-3">
+            <Link to="/profile" onClick={onClose} className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity cursor-pointer">
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
                    style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}>
                 {user?.full_name?.[0]?.toUpperCase() || '?'}
@@ -83,7 +83,7 @@ export default function Sidebar({ onClose }) {
                 <p className="text-sm font-medium text-foreground truncate">{user?.full_name || 'User'}</p>
                 <p className="text-xs text-muted-foreground capitalize">{role}</p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={() => base44.auth.logout()}
               className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm transition-colors w-full px-1"
