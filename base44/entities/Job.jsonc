@@ -1,0 +1,90 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "Job Title"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "customer_id": {
+      "type": "string",
+      "title": "Customer"
+    },
+    "vendor_id": {
+      "type": "string",
+      "title": "Assigned Vendor"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Scheduled Date"
+    },
+    "scheduled_time": {
+      "type": "string",
+      "title": "Scheduled Time"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "scheduled",
+        "approved",
+        "disapproved",
+        "in_progress",
+        "completed",
+        "declined"
+      ],
+      "default": "scheduled"
+    },
+    "is_on_demand": {
+      "type": "boolean",
+      "title": "On-Demand Job",
+      "default": false
+    },
+    "before_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Before Photos"
+    },
+    "after_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "After Photos"
+    },
+    "completion_notes": {
+      "type": "string",
+      "title": "Completion Notes"
+    },
+    "disapproval_reason": {
+      "type": "string",
+      "title": "Disapproval Reason"
+    },
+    "started_at": {
+      "type": "string",
+      "title": "Started At"
+    },
+    "completed_at": {
+      "type": "string",
+      "title": "Completed At"
+    },
+    "week_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Week Start Date"
+    }
+  },
+  "required": [
+    "title",
+    "customer_id",
+    "vendor_id",
+    "scheduled_date"
+  ]
+}

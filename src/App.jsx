@@ -6,7 +6,18 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-// Add page imports here
+import { Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Vendors from './pages/Vendors';
+import VendorDetail from './pages/VendorDetail';
+import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
+import Jobs from './pages/Jobs';
+import JobDetail from './pages/JobDetail';
+import Schedule from './pages/Schedule';
+import VendorPortal from './pages/VendorPortal';
+import VendorJobAction from './pages/VendorJobAction';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -34,7 +45,18 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/vendors" element={<Vendors />} />
+        <Route path="/vendors/:id" element={<VendorDetail />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/customers/:id" element={<CustomerDetail />} />
+        <Route path="/jobs" element={<Jobs />} />
+        <Route path="/jobs/:id" element={<JobDetail />} />
+        <Route path="/schedule" element={<Schedule />} />
+        <Route path="/vendor-portal" element={<VendorPortal />} />
+        <Route path="/vendor-job/:id" element={<VendorJobAction />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

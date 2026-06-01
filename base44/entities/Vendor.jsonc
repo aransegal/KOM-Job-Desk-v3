@@ -1,0 +1,55 @@
+{
+  "name": "Vendor",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Vendor Name"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "Construction Work",
+        "Water Tanks Installer",
+        "Chimney Cleaner",
+        "Air Ducts Cleaner",
+        "Electrician",
+        "Other"
+      ]
+    },
+    "category_description": {
+      "type": "string",
+      "title": "Category Description"
+    },
+    "user_id": {
+      "type": "string",
+      "title": "Linked User ID"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "name",
+    "category"
+  ]
+}

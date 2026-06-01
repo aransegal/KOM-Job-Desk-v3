@@ -1,0 +1,38 @@
+{
+  "name": "WeeklySchedule",
+  "type": "object",
+  "properties": {
+    "vendor_id": {
+      "type": "string",
+      "title": "Vendor"
+    },
+    "week_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Week Start (Monday)"
+    },
+    "sent_at": {
+      "type": "string",
+      "title": "Sent At"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "draft",
+        "sent",
+        "approved",
+        "partially_approved"
+      ],
+      "default": "draft"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "vendor_id",
+    "week_start_date"
+  ]
+}
