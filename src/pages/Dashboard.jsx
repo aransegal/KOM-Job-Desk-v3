@@ -80,44 +80,42 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Jobs by status chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-border p-5">
-          <h2 className="font-semibold text-foreground mb-4">Jobs by Status</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={chartData} barSize={28}>
-              <XAxis dataKey="status" tick={{ fontSize: 11 }} tickFormatter={s => s.replace('_', ' ')} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v, n, p) => [v, p.payload.status]} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry) => (
-                  <Cell key={entry.status} fill={CHART_COLORS[entry.status] || '#3CB371'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Recent jobs */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-border p-5">
-          <h2 className="font-semibold text-foreground mb-4">Recent Jobs</h2>
-          <div className="space-y-2">
-            {recentJobs.length === 0 && <p className="text-muted-foreground text-sm">No jobs yet.</p>}
-            {recentJobs.map(job => (
-              <div
-                key={job.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer transition-colors"
-                onClick={() => navigate(`/jobs/${job.id}`)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
-                  <p className="text-xs text-muted-foreground">{job.scheduled_date}</p>
-                </div>
-                <StatusBadge status={job.status} />
+      {/* Recent jobs - full width */}
+      <div className="bg-white rounded-xl shadow-sm border border-border p-5">
+        <h2 className="font-semibold text-foreground mb-4">Recent Jobs</h2>
+        <div className="space-y-2">
+          {recentJobs.length === 0 && <p className="text-muted-foreground text-sm">No jobs yet.</p>}
+          {recentJobs.map(job => (
+            <div
+              key={job.id}
+              className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-secondary/50 cursor-pointer transition-colors"
+              onClick={() => navigate(`/jobs/${job.id}`)}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{job.title}</p>
+                <p className="text-xs text-muted-foreground">{job.scheduled_date}</p>
               </div>
-            ))}
-          </div>
+              <StatusBadge status={job.status} />
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* Jobs by status chart - bottom */}
+      <div className="bg-white rounded-xl shadow-sm border border-border p-5">
+        <h2 className="font-semibold text-foreground mb-4">Jobs by Status</h2>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={chartData} barSize={28}>
+            <XAxis dataKey="status" tick={{ fontSize: 11 }} tickFormatter={s => s.replace('_', ' ')} />
+            <YAxis tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v, n, p) => [v, p.payload.status]} />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+              {chartData.map((entry) => (
+                <Cell key={entry.status} fill={CHART_COLORS[entry.status] || '#3CB371'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
