@@ -16,7 +16,7 @@ export default function Layout() {
         <Sidebar onClose={() => setOpen(false)} />
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden flex items-center justify-center h-14 px-4 bg-white border-b border-border shadow-sm">
+        <div className="lg:hidden flex items-center justify-center py-3 px-4 bg-white border-b border-border shadow-sm relative">
           <Button variant="ghost" size="icon" onClick={() => setOpen(true)} className="absolute left-2">
             <Menu className="h-5 w-5" />
           </Button>
