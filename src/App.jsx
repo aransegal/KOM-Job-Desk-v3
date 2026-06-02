@@ -20,6 +20,7 @@ import VendorPortal from './pages/VendorPortal';
 import VendorJobAction from './pages/VendorJobAction';
 import InviteUser from './pages/InviteUser';
 import Profile from './pages/Profile';
+import Login from './pages/Login';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
         <Route path="/invite-user" element={<InviteUser />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
+      <Route path="/login" element={<Login />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
