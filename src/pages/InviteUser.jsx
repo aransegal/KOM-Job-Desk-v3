@@ -64,7 +64,7 @@ export default function InviteUser() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Vendor</SelectItem>
-                {currentUser?.role === 'admin' && <SelectItem value="manager">Manager</SelectItem>}
+                {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && <SelectItem value="manager">Manager</SelectItem>}
                 {currentUser?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
               </SelectContent>
             </Select>
