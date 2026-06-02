@@ -63,8 +63,7 @@ export default function InviteUser() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Vendor (user)</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="user">Vendor / Manager (user)</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
