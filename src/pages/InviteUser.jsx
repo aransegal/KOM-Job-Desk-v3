@@ -68,9 +68,9 @@ export default function InviteUser() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">Vendor (user)</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="user">Vendor</SelectItem>
+                {currentUser?.role === 'admin' && <SelectItem value="manager">Manager</SelectItem>}
+                {currentUser?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
               </SelectContent>
             </Select>
           </div>
