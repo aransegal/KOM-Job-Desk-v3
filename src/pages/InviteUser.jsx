@@ -15,8 +15,8 @@ export default function InviteUser() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'manager') {
-    return <div className="p-8 text-center text-muted-foreground">Access denied.</div>;
+  if (currentUser && currentUser.role !== 'admin') {
+    return <div className="p-8 text-center text-muted-foreground">Only admins can invite new users.</div>;
   }
 
   const handleInvite = async (e) => {
@@ -64,7 +64,7 @@ export default function InviteUser() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Vendor</SelectItem>
-                {(currentUser?.role === 'admin' || currentUser?.role === 'manager') && <SelectItem value="manager">Manager</SelectItem>}
+                {currentUser?.role === 'admin' && <SelectItem value="manager">Manager</SelectItem>}
                 {currentUser?.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
               </SelectContent>
             </Select>

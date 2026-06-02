@@ -10,7 +10,15 @@ const ADMIN_NAV = [
   { path: '/schedule', label: 'Schedule', icon: CalendarDays },
   { path: '/vendors', label: 'Vendors', icon: HardHat },
   { path: '/customers', label: 'Customers', icon: Users },
-  { path: '/invite-user', label: 'Invite User', icon: UserPlus },
+  { path: '/invite-user', label: 'Invite User', icon: UserPlus, adminOnly: true },
+];
+
+const MANAGER_NAV = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/jobs', label: 'Jobs', icon: Briefcase },
+  { path: '/schedule', label: 'Schedule', icon: CalendarDays },
+  { path: '/vendors', label: 'Vendors', icon: HardHat },
+  { path: '/customers', label: 'Customers', icon: Users },
 ];
 
 const VENDOR_NAV = [
@@ -22,7 +30,7 @@ export default function Sidebar({ onClose }) {
   const location = useLocation();
   const { data: user } = useCurrentUser();
   const role = user?.role || 'vendor';
-  const navItems = (role === 'admin' || role === 'manager') ? ADMIN_NAV : VENDOR_NAV;
+  const navItems = role === 'admin' ? ADMIN_NAV : role === 'manager' ? MANAGER_NAV : VENDOR_NAV;
 
   return (
     <div className="h-full flex flex-col bg-white border-r border-border">

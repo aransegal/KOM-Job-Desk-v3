@@ -25,8 +25,8 @@ Deno.serve(async (req) => {
     // Platform only supports 'user' or 'admin' as base platform roles
     const platformRole = allowedRole === 'admin' ? 'admin' : 'user';
 
-    // Use service role to perform the invite so managers can also send invites
-    const invitedUser = await base44.asServiceRole.auth.inviteUser(email, platformRole);
+    // Use base44.auth.inviteUser with the request-scoped client
+    const invitedUser = await base44.auth.inviteUser(email, platformRole);
 
     // If inviting as manager, update the app role after invitation
     if (allowedRole === 'manager' && invitedUser?.id) {
