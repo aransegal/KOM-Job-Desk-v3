@@ -73,7 +73,7 @@ export default function Sidebar({ onClose }) {
       <div className="p-4 border-t border-border">
         {!user ? (
           <button
-            onClick={() => base44.auth.redirectToLogin()}
+            onClick={() => base44.auth.redirectToLogin(window.location.href)}
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
           >
