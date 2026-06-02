@@ -4,12 +4,12 @@
   "properties": {
     "role": {
       "type": "string",
+      "title": "Role",
       "enum": [
         "admin",
         "manager",
-        "vendor"
-      ],
-      "default": "vendor"
+        "user"
+      ]
     }
   }
 }
