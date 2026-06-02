@@ -22,8 +22,9 @@ Deno.serve(async (req) => {
     // Managers can invite vendors and managers; admins can invite any role
     const allowedRole = user.role === 'manager' && role === 'admin' ? 'user' : (role || 'user');
 
-    // Use service role to bypass the admin-only restriction on inviteUser
-    const invitedUser = await base44.asServiceRole.users.inviteUser(email, allowedRole === 'manager' ? 'user' : allowedRole);
+    // Invite with 'user' base role (platform only supports 'user' or 'admin')
+    const inviteAsRole = allowedRole === 'admin' ? 'admin' : 'user';
+    const invitedUser = await base44.users.inviteUser(email, inviteAsRole);
 
     // If inviting as manager, update role after invitation
     if (allowedRole === 'manager' && invitedUser?.id) {
