@@ -25,12 +25,7 @@ export default function InviteUser() {
     setSuccess(false);
     setLoading(true);
     try {
-      // inviteUser only accepts "user" or "admin"; for manager we invite as "user" then update role
-      const inviteRole = role === 'manager' ? 'user' : role;
-      const invitedUser = await base44.users.inviteUser(email, inviteRole);
-      if (role === 'manager' && invitedUser?.id) {
-        await base44.entities.User.update(invitedUser.id, { role: 'manager' });
-      }
+      await base44.functions.invoke('inviteVendor', { email, role });
       setSuccess(true);
       setEmail('');
     } catch (err) {
