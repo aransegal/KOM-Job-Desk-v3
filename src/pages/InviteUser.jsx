@@ -25,11 +25,19 @@ export default function InviteUser() {
     setSuccess(false);
     setLoading(true);
     try {
-      await base44.functions.invoke('inviteVendor', { email, role });
+      // Platform only supports 'user' or 'admin' as base platform roles
+      const platformRole = role === 'admin' ? 'admin' : 'user';
+      const invitedUser = await base44.auth.inviteUser(email, platformRole);
+
+      // If the intended role is 'manager', update the app-level role after invitation
+      if (role === 'manager' && invitedUser?.id) {
+        await base44.entities.User.update(invitedUser.id, { role: 'manager' });
+      }
+
       setSuccess(true);
       setEmail('');
     } catch (err) {
-      setError(err?.message || 'Failed to send invite. Please try again.');
+      setError(err?.response?.data?.detail || err?.message || 'Failed to send invite. Please try again.');
     } finally {
       setLoading(false);
     }

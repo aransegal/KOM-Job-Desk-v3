@@ -19,14 +19,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Email is required.' }, { status: 400 });
     }
 
-    // Managers can invite vendors and managers; admins can invite any role
+    // Managers cannot invite admins
     const allowedRole = user.role === 'manager' && role === 'admin' ? 'user' : (role || 'user');
 
-    // Invite with 'user' base role (platform only supports 'user' or 'admin')
-    const inviteAsRole = allowedRole === 'admin' ? 'admin' : 'user';
-    const invitedUser = await base44.users.inviteUser(email, inviteAsRole);
+    // Platform only supports 'user' or 'admin' as base platform roles
+    const platformRole = allowedRole === 'admin' ? 'admin' : 'user';
 
-    // If inviting as manager, update role after invitation
+    // Use the user-scoped client — carries the caller's auth token
+    const invitedUser = await base44.auth.inviteUser(email, platformRole);
+
+    // If inviting as manager, update the app role after invitation
     if (allowedRole === 'manager' && invitedUser?.id) {
       await base44.asServiceRole.entities.User.update(invitedUser.id, { role: 'manager' });
     }
