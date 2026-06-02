@@ -15,7 +15,7 @@ export default function InviteUser() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  if (currentUser && currentUser.role !== 'admin') {
+  if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'manager') {
     return <div className="p-8 text-center text-muted-foreground">Access denied.</div>;
   }
 
