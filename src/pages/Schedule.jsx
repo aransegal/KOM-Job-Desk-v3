@@ -36,20 +36,20 @@ export default function Schedule() {
   const { data: jobs = [] } = useQuery({ queryKey: ['jobs'], queryFn: () => base44.entities.Job.list('-scheduled_date', 200) });
   const { data: schedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: () => base44.entities.WeeklySchedule.list() });
 
-  const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
+  const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
 
-  const weekJobs = jobs.filter(j => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
+  const weekJobs = jobs.filter((j) => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
 
   const createJobMutation = useMutation({
     mutationFn: (data) => base44.entities.Job.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['jobs'] }); toast.success('Job added to schedule'); setDialog(false); },
+    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['jobs'] });toast.success('Job added to schedule');setDialog(false);}
   });
 
   const sendScheduleMutation = useMutation({
     mutationFn: async () => {
-      const vendorIds = [...new Set(weekJobs.map(j => j.vendor_id))];
+      const vendorIds = [...new Set(weekJobs.map((j) => j.vendor_id))];
       for (const vendorId of vendorIds) {
-        const existing = schedules.find(s => s.vendor_id === vendorId && s.week_start_date === weekStartStr);
+        const existing = schedules.find((s) => s.vendor_id === vendorId && s.week_start_date === weekStartStr);
         const sentAt = new Date().toISOString();
         if (existing) {
           await base44.entities.WeeklySchedule.update(existing.id, { status: 'sent', sent_at: sentAt });
@@ -58,11 +58,11 @@ export default function Schedule() {
         }
       }
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['schedules'] }); toast.success(`Schedule sent to ${[...new Set(weekJobs.map(j => j.vendor_id))].length} vendor(s)!`); },
+    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['schedules'] });toast.success(`Schedule sent to ${[...new Set(weekJobs.map((j) => j.vendor_id))].length} vendor(s)!`);}
   });
 
-  const activeVendors = vendors.filter(v => v.status === 'active');
-  const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]));
+  const activeVendors = vendors.filter((v) => v.status === 'active');
+  const vendorMap = Object.fromEntries(vendors.map((v) => [v.id, v]));
 
   const handleAddJob = (e) => {
     e.preventDefault();
@@ -74,21 +74,21 @@ export default function Schedule() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Weekly Schedule</h1>
+          <h1 className="text-2xl font-semibold text-foreground text-left">Weekly Schedule</h1>
           <p className="text-muted-foreground text-sm mt-1">Build and send schedules to vendors</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(d => addDays(d, -7))}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" onClick={() => setWeekStart((d) => addDays(d, -7))}><ChevronLeft className="h-4 w-4" /></Button>
           <span className="text-sm font-medium px-3 min-w-48 text-center">
             {format(weekStart, 'MMM d')} – {format(addDays(weekStart, 6), 'MMM d, yyyy')}
           </span>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(d => addDays(d, 7))}><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" onClick={() => setWeekStart((d) => addDays(d, 7))}><ChevronRight className="h-4 w-4" /></Button>
           <Button
             onClick={() => sendScheduleMutation.mutate()}
             disabled={weekJobs.length === 0 || sendScheduleMutation.isPending}
             style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
-            className="text-white border-0 ml-2"
-          >
+            className="text-white border-0 ml-2">
+            
             <Send className="h-4 w-4 mr-2" />Send Schedule
           </Button>
         </div>
@@ -105,8 +105,8 @@ export default function Schedule() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{DAYS[i]}</p>
                 <p className={`text-lg font-bold mt-0.5 ${isToday ? 'text-primary' : 'text-foreground'}`}>{format(day, 'd')}</p>
                 <p className="text-xs text-muted-foreground">{format(day, 'MMM')}</p>
-              </div>
-            );
+              </div>);
+
           })}
         </div>
 
@@ -114,37 +114,37 @@ export default function Schedule() {
         <div className="grid grid-cols-7 min-h-64">
           {weekDays.map((day, i) => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            const dayJobs = weekJobs.filter(j => j.scheduled_date === dayStr);
+            const dayJobs = weekJobs.filter((j) => j.scheduled_date === dayStr);
             const isToday = dayStr === format(new Date(), 'yyyy-MM-dd');
             return (
               <div key={i} className={`border-r border-border last:border-r-0 p-2 space-y-1.5 ${isToday ? 'bg-primary/5' : ''}`}>
-                {dayJobs.map(job => {
+                {dayJobs.map((job) => {
                   const vendor = vendorMap[job.vendor_id];
                   return (
                     <div
                       key={job.id}
                       className="p-2 rounded-lg cursor-pointer hover:opacity-90 transition-opacity text-white text-xs"
                       style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                    >
+                      onClick={() => navigate(`/jobs/${job.id}`)}>
+                      
                       <p className="font-semibold truncate leading-tight">{job.title}</p>
                       {vendor && <p className="opacity-80 truncate mt-0.5">👷 {vendor.name}</p>}
                       {job.scheduled_time && <p className="opacity-70 mt-0.5">🕐 {job.scheduled_time}</p>}
-                    </div>
-                  );
+                    </div>);
+
                 })}
-                {dayJobs.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center pt-4 opacity-50">—</p>
-                )}
-              </div>
-            );
+                {dayJobs.length === 0 &&
+                <p className="text-xs text-muted-foreground text-center pt-4 opacity-50">—</p>
+                }
+              </div>);
+
           })}
         </div>
       </div>
 
       {/* Add job button */}
       <div className="flex justify-end">
-        <Button variant="outline" onClick={() => { setForm(f => ({ ...f, scheduled_date: weekStartStr })); setDialog(true); }}>
+        <Button variant="outline" onClick={() => {setForm((f) => ({ ...f, scheduled_date: weekStartStr }));setDialog(true);}}>
           <Plus className="h-4 w-4 mr-2" />Add Job
         </Button>
       </div>
@@ -153,23 +153,23 @@ export default function Schedule() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add Job to Schedule</DialogTitle></DialogHeader>
           <form onSubmit={handleAddJob} className="space-y-4">
-            <div><Label>Title *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} required /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
+            <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required /></div>
+            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} /></div>
             <div><Label>Customer *</Label>
-              <Select value={form.customer_id} onValueChange={v => setForm(f => ({ ...f, customer_id: v }))}>
+              <Select value={form.customer_id} onValueChange={(v) => setForm((f) => ({ ...f, customer_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div><Label>Vendor *</Label>
-              <Select value={form.vendor_id} onValueChange={v => setForm(f => ({ ...f, vendor_id: v }))}>
+              <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                <SelectContent>{activeVendors.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{activeVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Date *</Label><Input type="date" min={weekStartStr} max={weekEndStr} value={form.scheduled_date} onChange={e => setForm(f => ({ ...f, scheduled_date: e.target.value }))} required /></div>
-              <div><Label>Time</Label><Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} /></div>
+              <div><Label>Date *</Label><Input type="date" min={weekStartStr} max={weekEndStr} value={form.scheduled_date} onChange={(e) => setForm((f) => ({ ...f, scheduled_date: e.target.value }))} required /></div>
+              <div><Label>Time</Label><Input type="time" value={form.scheduled_time} onChange={(e) => setForm((f) => ({ ...f, scheduled_time: e.target.value }))} /></div>
             </div>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setDialog(false)}>Cancel</Button>
@@ -178,6 +178,6 @@ export default function Schedule() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>);
+
 }
