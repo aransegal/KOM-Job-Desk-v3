@@ -39,7 +39,7 @@ export default function Sidebar({ onClose }) {
         <img
           src="https://media.base44.com/images/public/user_69979ae63826daa68837a1ce/c695ce0a1_logo53.png"
           alt="KOM Job Desk"
-          className="h-20 w-auto object-contain mx-auto"
+          className="h-26 w-auto object-contain mx-auto"
         />
         <button onClick={onClose} className="lg:hidden text-muted-foreground hover:text-foreground p-1">
           <X className="h-5 w-5" />
