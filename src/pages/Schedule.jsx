@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import StatusBadge from '@/components/StatusBadge';
-import { ChevronLeft, ChevronRight, Plus, Send, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { addDays, startOfWeek, format, parseISO } from 'date-fns';
+import { addDays, startOfWeek, format } from 'date-fns';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 function getWeekStart(date) {
   return startOfWeek(date, { weekStartsOn: 1 });
@@ -22,9 +23,10 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export default function Schedule() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
   const [weekStart, setWeekStart] = useState(getWeekStart(new Date()));
   const [dialog, setDialog] = useState(false);
-  const [selectedVendorId, setSelectedVendorId] = useState('');
+  const [selectedWorkerId, setSelectedWorkerId] = useState('');
   const [form, setForm] = useState({ title: '', description: '', customer_id: '', vendor_id: '', scheduled_date: '', scheduled_time: '' });
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -35,14 +37,67 @@ export default function Schedule() {
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
   const { data: jobs = [] } = useQuery({ queryKey: ['jobs'], queryFn: () => base44.entities.Job.list('-scheduled_date', 200) });
   const { data: schedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: () => base44.entities.WeeklySchedule.list() });
+  const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.filter({ status: 'active' }) });
+  const { data: assignments = [] } = useQuery({ queryKey: ['jobAssignments'], queryFn: () => base44.entities.JobAssignment.list() });
 
   const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
+  const workerMap = Object.fromEntries(allWorkers.map((w) => [w.id, w]));
+  // Map job_id -> worker_id via assignments (for display on cards)
+  const jobWorkerMap = Object.fromEntries(assignments.filter(a => a.worker_id).map(a => [a.job_id, a.worker_id]));
 
   const weekJobs = jobs.filter((j) => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
 
+  // Active workers filtered to currently selected vendor in dialog
+  const vendorActiveWorkers = allWorkers.filter(w => w.vendor_id === form.vendor_id);
+  const resolvedWorkerId = (selectedWorkerId && selectedWorkerId !== 'none') ? selectedWorkerId : null;
+
   const createJobMutation = useMutation({
-    mutationFn: (data) => base44.entities.Job.create(data),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['jobs'] });toast.success('Job added to schedule');setDialog(false);}
+    mutationFn: async (data) => {
+      // 1. Create the Job
+      const job = await base44.entities.Job.create(data);
+
+      // 2. Create JobAssignment
+      let assignment;
+      try {
+        assignment = await base44.entities.JobAssignment.create({
+          job_id: job.id,
+          vendor_id: data.vendor_id,
+          worker_id: resolvedWorkerId,
+          assigned_by_user_id: currentUser?.id || null,
+          assignment_status: 'assigned',
+          assigned_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        toast.error(`Job created but JobAssignment failed: ${err.message}`);
+        return job;
+      }
+
+      // 3. Create ScheduleItem
+      try {
+        await base44.entities.ScheduleItem.create({
+          job_id: job.id,
+          assignment_id: assignment.id,
+          vendor_id: data.vendor_id,
+          worker_id: resolvedWorkerId,
+          scheduled_date: data.scheduled_date,
+          start_time: data.scheduled_time || null,
+          week_start_date: data.week_start_date,
+          schedule_status: 'scheduled',
+          created_by_user_id: currentUser?.id || null,
+        });
+      } catch (err) {
+        toast.error(`Job created but ScheduleItem failed: ${err.message}`);
+      }
+
+      return job;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobAssignments'] });
+      toast.success('Job added to schedule');
+      setDialog(false);
+      setSelectedWorkerId('');
+    },
   });
 
   const sendScheduleMutation = useMutation({
@@ -66,8 +121,12 @@ export default function Schedule() {
 
   const handleAddJob = (e) => {
     e.preventDefault();
-    const data = { ...form, week_start_date: weekStartStr };
-    createJobMutation.mutate(data);
+    createJobMutation.mutate({ ...form, week_start_date: weekStartStr });
+  };
+
+  const handleVendorChange = (v) => {
+    setForm(f => ({ ...f, vendor_id: v }));
+    setSelectedWorkerId(''); // reset worker when vendor changes
   };
 
   return (
@@ -129,6 +188,9 @@ export default function Schedule() {
                       
                       <p className="font-semibold truncate leading-tight">{job.title}</p>
                       {vendor && <p className="opacity-80 truncate mt-0.5">👷 {vendor.name}</p>}
+                      {jobWorkerMap[job.id] && workerMap[jobWorkerMap[job.id]] && (
+                        <p className="opacity-80 truncate mt-0.5">🧑‍🔧 {workerMap[jobWorkerMap[job.id]].name}</p>
+                      )}
                       {job.scheduled_time && <p className="opacity-70 mt-0.5">🕐 {job.scheduled_time}</p>}
                     </div>);
 
@@ -149,7 +211,7 @@ export default function Schedule() {
         </Button>
       </div>
 
-      <Dialog open={dialog} onOpenChange={() => setDialog(false)}>
+      <Dialog open={dialog} onOpenChange={() => { setDialog(false); setSelectedWorkerId(''); setForm(f => ({ ...f, vendor_id: '', customer_id: '' })); }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add Job to Schedule</DialogTitle></DialogHeader>
           <form onSubmit={handleAddJob} className="space-y-4">
@@ -162,9 +224,31 @@ export default function Schedule() {
               </Select>
             </div>
             <div><Label>Vendor *</Label>
-              <Select value={form.vendor_id} onValueChange={(v) => setForm((f) => ({ ...f, vendor_id: v }))}>
+              <Select value={form.vendor_id} onValueChange={handleVendorChange}>
                 <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
                 <SelectContent>{activeVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Worker (optional)</Label>
+              <Select
+                value={selectedWorkerId}
+                onValueChange={setSelectedWorkerId}
+                disabled={!form.vendor_id}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !form.vendor_id ? 'Select a vendor first' :
+                    vendorActiveWorkers.length === 0 ? 'No active workers for this vendor' :
+                    'Select worker (optional)'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— No worker —</SelectItem>
+                  {vendorActiveWorkers.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}{w.role ? ` · ${w.role}` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
