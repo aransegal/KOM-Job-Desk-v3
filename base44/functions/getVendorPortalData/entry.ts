@@ -30,8 +30,8 @@ Deno.serve(async (req) => {
     // Load only this vendor's weekly schedules
     const allSchedules = await base44.asServiceRole.entities.WeeklySchedule.filter({ vendor_id: vendor.id });
 
-    // Build a set of customer IDs referenced by this vendor's jobs
-    const customerIds = [...new Set(allJobs.map(j => j.customer_id).filter(Boolean))];
+    // Build customersById from the filtered jobs (only customers needed for this week view)
+    const customerIds = [...new Set(jobs.map(j => j.customer_id).filter(Boolean))];
 
     // Fetch only those customers and build a safe snapshot
     const customersById = {};
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       }
     }));
 
-    return Response.json({ vendor, jobs: allJobs, customersById, schedules: allSchedules });
+    return Response.json({ vendor, jobs, customersById, schedules: allSchedules });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

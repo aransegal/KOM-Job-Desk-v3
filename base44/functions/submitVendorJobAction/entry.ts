@@ -97,6 +97,16 @@ Deno.serve(async (req) => {
       }, { status: 422 });
     }
 
+    // On-demand action guard: accept/decline require job.is_on_demand === true
+    if ((action === 'accept_on_demand' || action === 'decline_on_demand') && !job.is_on_demand) {
+      return Response.json({ error: `Cannot perform '${action}' on a non-on-demand job.` }, { status: 422 });
+    }
+
+    // Regular scheduled actions should not accept on-demand jobs
+    if ((action === 'approve_job' || action === 'disapprove_job') && job.is_on_demand) {
+      return Response.json({ error: `Cannot perform '${action}' on an on-demand job. Use accept_on_demand or decline_on_demand instead.` }, { status: 422 });
+    }
+
     let updatePayload = {};
 
     if (action === 'approve_job' || action === 'accept_on_demand') {
