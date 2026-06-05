@@ -1,0 +1,69 @@
+{
+  "name": "ScheduleItem",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "title": "Job"
+    },
+    "assignment_id": {
+      "type": "string",
+      "title": "Job Assignment"
+    },
+    "vendor_id": {
+      "type": "string",
+      "title": "Vendor"
+    },
+    "worker_id": {
+      "type": "string",
+      "title": "Worker"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Scheduled Date"
+    },
+    "start_time": {
+      "type": "string",
+      "title": "Start Time"
+    },
+    "end_time": {
+      "type": "string",
+      "title": "End Time"
+    },
+    "time_window": {
+      "type": "string",
+      "title": "Time Window"
+    },
+    "week_start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Week Start Date"
+    },
+    "schedule_status": {
+      "type": "string",
+      "title": "Schedule Status",
+      "enum": [
+        "scheduled",
+        "rescheduled",
+        "cancelled",
+        "completed"
+      ],
+      "default": "scheduled"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "title": "Created By User ID"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "job_id",
+    "vendor_id",
+    "scheduled_date",
+    "schedule_status"
+  ]
+}

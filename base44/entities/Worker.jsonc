@@ -1,0 +1,48 @@
+{
+  "name": "Worker",
+  "type": "object",
+  "properties": {
+    "vendor_id": {
+      "type": "string",
+      "title": "Vendor"
+    },
+    "user_id": {
+      "type": "string",
+      "title": "Linked User ID"
+    },
+    "name": {
+      "type": "string",
+      "title": "Worker Name"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "role": {
+      "type": "string",
+      "title": "Worker Role / Trade"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "vendor_id",
+    "name",
+    "status"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "name": "JobAssignment",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "title": "Job"
+    },
+    "vendor_id": {
+      "type": "string",
+      "title": "Vendor"
+    },
+    "worker_id": {
+      "type": "string",
+      "title": "Worker"
+    },
+    "assigned_by_user_id": {
+      "type": "string",
+      "title": "Assigned By User ID"
+    },
+    "assignment_status": {
+      "type": "string",
+      "title": "Assignment Status",
+      "enum": [
+        "assigned",
+        "accepted",
+        "declined",
+        "cancelled",
+        "completed"
+      ],
+      "default": "assigned"
+    },
+    "assigned_at": {
+      "type": "string",
+      "title": "Assigned At"
+    },
+    "accepted_at": {
+      "type": "string",
+      "title": "Accepted At"
+    },
+    "declined_at": {
+      "type": "string",
+      "title": "Declined At"
+    },
+    "decline_reason": {
+      "type": "string",
+      "title": "Decline Reason"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "job_id",
+    "vendor_id",
+    "assignment_status"
+  ]
+}
