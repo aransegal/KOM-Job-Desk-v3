@@ -3,6 +3,7 @@ import { LogIn } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { base44 } from '@/api/base44Client';
 import { LayoutDashboard, Briefcase, CalendarDays, HardHat, Users, Calendar, LogOut, X, UserPlus } from 'lucide-react';
+import { isAdmin, isInternal, isVendor, normalizeRole } from '@/lib/permissions';
 
 const ADMIN_NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -10,10 +11,10 @@ const ADMIN_NAV = [
   { path: '/schedule', label: 'Schedule', icon: CalendarDays },
   { path: '/vendors', label: 'Vendors', icon: HardHat },
   { path: '/customers', label: 'Customers', icon: Users },
-  { path: '/invite-user', label: 'Invite User', icon: UserPlus, adminOnly: true },
+  { path: '/invite-user', label: 'Invite User', icon: UserPlus },
 ];
 
-const MANAGER_NAV = [
+const DISPATCHER_NAV = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
   { path: '/schedule', label: 'Schedule', icon: CalendarDays },
@@ -26,11 +27,19 @@ const VENDOR_NAV = [
   { path: '/jobs', label: 'My Jobs', icon: Briefcase },
 ];
 
+function getNavItems(user) {
+  if (!user) return [];
+  if (isAdmin(user)) return ADMIN_NAV;
+  if (isInternal(user)) return DISPATCHER_NAV;
+  if (isVendor(user)) return VENDOR_NAV;
+  // worker or unknown role: no nav items
+  return [];
+}
+
 export default function Sidebar({ onClose }) {
   const location = useLocation();
   const { data: user } = useCurrentUser();
-  const role = user?.role || 'vendor';
-  const navItems = role === 'admin' ? ADMIN_NAV : role === 'manager' ? MANAGER_NAV : VENDOR_NAV;
+  const navItems = getNavItems(user);
 
   return (
     <div className="h-full flex flex-col bg-white border-r border-border">
@@ -89,7 +98,7 @@ export default function Sidebar({ onClose }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{user?.full_name || 'User'}</p>
-                <p className="text-xs text-muted-foreground capitalize">{role}</p>
+                <p className="text-xs text-muted-foreground capitalize">{normalizeRole(user?.role) ?? user?.role}</p>
               </div>
             </Link>
             <button

@@ -7,9 +7,22 @@
       "title": "Role",
       "enum": [
         "admin",
+        "dispatcher",
+        "vendor",
+        "worker",
         "manager",
         "user"
-      ]
+      ],
+      "default": "user",
+      "description": "User role. 'manager' and 'user' are legacy values kept for backward compatibility."
+    },
+    "phone": {
+      "type": "string",
+      "title": "Phone"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
     }
   }
 }
