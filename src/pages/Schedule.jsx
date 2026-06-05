@@ -37,7 +37,7 @@ export default function Schedule() {
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
   const { data: jobs = [] } = useQuery({ queryKey: ['jobs'], queryFn: () => base44.entities.Job.list('-scheduled_date', 200) });
   const { data: schedules = [] } = useQuery({ queryKey: ['schedules'], queryFn: () => base44.entities.WeeklySchedule.list() });
-  const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.filter({ status: 'active' }) });
+  const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.list() });
   const { data: assignments = [] } = useQuery({ queryKey: ['jobAssignments'], queryFn: () => base44.entities.JobAssignment.list() });
 
   const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
@@ -47,8 +47,8 @@ export default function Schedule() {
 
   const weekJobs = jobs.filter((j) => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
 
-  // Active workers filtered to currently selected vendor in dialog
-  const vendorActiveWorkers = allWorkers.filter(w => w.vendor_id === form.vendor_id);
+  // Active workers filtered to currently selected vendor in dialog (client-side filter for both status and vendor)
+  const vendorActiveWorkers = allWorkers.filter(w => w.vendor_id === form.vendor_id && w.status === 'active');
   const resolvedWorkerId = (selectedWorkerId && selectedWorkerId !== 'none') ? selectedWorkerId : null;
 
   const createJobMutation = useMutation({
