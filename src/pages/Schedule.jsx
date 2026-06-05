@@ -49,7 +49,7 @@ export default function Schedule() {
 
   // Active workers filtered to currently selected vendor in dialog (client-side filter for both status and vendor)
   const vendorActiveWorkers = allWorkers.filter(w => w.vendor_id === form.vendor_id && w.status === 'active');
-  const resolvedWorkerId = (selectedWorkerId && selectedWorkerId !== 'none') ? selectedWorkerId : null;
+  const resolvedWorkerId = (selectedWorkerId && selectedWorkerId !== '__none__') ? selectedWorkerId : null;
 
   const createJobMutation = useMutation({
     mutationFn: async (data) => {
@@ -229,28 +229,29 @@ export default function Schedule() {
                 <SelectContent>{activeVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Worker (optional)</Label>
-              <Select
-                value={selectedWorkerId}
-                onValueChange={setSelectedWorkerId}
-                disabled={!form.vendor_id}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    !form.vendor_id ? 'Select a vendor first' :
-                    vendorActiveWorkers.length === 0 ? 'No active workers for this vendor' :
-                    'Select worker (optional)'
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— No worker —</SelectItem>
-                  {vendorActiveWorkers.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>{w.name}{w.role ? ` · ${w.role}` : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {form.vendor_id && (
+              <div>
+                <Label>Worker (optional)</Label>
+                <Select
+                  value={selectedWorkerId || undefined}
+                  onValueChange={(v) => setSelectedWorkerId(v === '__none__' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      vendorActiveWorkers.length === 0
+                        ? 'No active workers for this vendor'
+                        : 'Select worker (optional)'
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— No worker —</SelectItem>
+                    {vendorActiveWorkers.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}{w.role ? ` · ${w.role}` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date *</Label><Input type="date" min={weekStartStr} max={weekEndStr} value={form.scheduled_date} onChange={(e) => setForm((f) => ({ ...f, scheduled_date: e.target.value }))} required /></div>
               <div><Label>Time</Label><Input type="time" value={form.scheduled_time} onChange={(e) => setForm((f) => ({ ...f, scheduled_time: e.target.value }))} /></div>
