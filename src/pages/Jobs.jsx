@@ -13,7 +13,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
 import { toast } from 'sonner';
 
-const EMPTY_FORM = { title: '', description: '', customer_id: '', vendor_id: '', scheduled_date: '', scheduled_time: '', is_on_demand: false, week_start_date: '' };
+const EMPTY_FORM = { title: '', description: '', customer_id: '', vendor_id: '', worker_id: '', scheduled_date: '', scheduled_time: '', is_on_demand: false, week_start_date: '' };
 
 function getMonday(dateStr) {
   const d = new Date(dateStr);
@@ -57,13 +57,67 @@ export default function Jobs() {
 
   const { data: vendors = [] } = useQuery({ queryKey: ['vendors'], queryFn: () => base44.entities.Vendor.list() });
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
+  const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.list() });
 
   const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]));
   const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
 
+  // Active workers for the vendor currently selected in the dialog
+  const activeWorkersForVendor = allWorkers.filter(
+    w => w.vendor_id === form.vendor_id && w.status === 'active'
+  );
+
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Job.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['jobs'] }); toast.success('Job created'); setDialog(false); },
+    mutationFn: async (data) => {
+      const { worker_id, ...jobData } = data;
+      const workerIdToSave = worker_id || null;
+
+      // 1. Create Job
+      const job = await base44.entities.Job.create(jobData);
+
+      // 2. Create JobAssignment
+      let assignment;
+      try {
+        assignment = await base44.entities.JobAssignment.create({
+          job_id: job.id,
+          vendor_id: data.vendor_id,
+          worker_id: workerIdToSave,
+          assigned_by_user_id: user?.id || null,
+          assignment_status: 'assigned',
+          assigned_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        toast.error(`Job created but assignment failed: ${err.message}`);
+        return job;
+      }
+
+      // 3. Create ScheduleItem if date is set
+      if (data.scheduled_date) {
+        try {
+          await base44.entities.ScheduleItem.create({
+            job_id: job.id,
+            assignment_id: assignment.id,
+            vendor_id: data.vendor_id,
+            worker_id: workerIdToSave,
+            scheduled_date: data.scheduled_date,
+            start_time: data.scheduled_time || null,
+            week_start_date: data.week_start_date || null,
+            schedule_status: 'scheduled',
+            created_by_user_id: user?.id || null,
+          });
+        } catch (err) {
+          toast.error(`Job created but schedule item failed: ${err.message}`);
+        }
+      }
+
+      return job;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobAssignments'] });
+      toast.success('Job created');
+      setDialog(false);
+    },
   });
 
   // Role-based filter
@@ -235,11 +289,28 @@ export default function Jobs() {
               </Select>
             </div>
             <div><Label>Vendor *</Label>
-              <Select value={form.vendor_id} onValueChange={v => setForm(f => ({ ...f, vendor_id: v }))}>
+              <Select value={form.vendor_id || undefined} onValueChange={v => setForm(f => ({ ...f, vendor_id: v, worker_id: '' }))}>
                 <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
                 <SelectContent>{vendors.filter(v => v.status === 'active').map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {form.vendor_id && (
+              <div>
+                <Label>Worker (optional)</Label>
+                {activeWorkersForVendor.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-1 px-1">No active workers for this vendor.</p>
+                ) : (
+                  <Select value={form.worker_id || undefined} onValueChange={v => setForm(f => ({ ...f, worker_id: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select worker (optional)" /></SelectTrigger>
+                    <SelectContent>
+                      {activeWorkersForVendor.map(w => (
+                        <SelectItem key={w.id} value={w.id}>{w.name}{w.role ? ` · ${w.role}` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date *</Label><Input type="date" value={form.scheduled_date} onChange={e => setForm(f => ({ ...f, scheduled_date: e.target.value }))} required /></div>
               <div><Label>Time</Label><Input type="time" value={form.scheduled_time} onChange={e => setForm(f => ({ ...f, scheduled_time: e.target.value }))} /></div>
