@@ -76,7 +76,7 @@ const AuthenticatedApp = () => {
         {/* Vendor only */}
         <Route path="/vendor-portal" element={<RoleGuard checkFn={canAccessVendorPortal}><VendorPortal /></RoleGuard>} />
         <Route path="/vendor-job/:id" element={<RoleGuard checkFn={canAccessVendorPortal}><VendorJobAction /></RoleGuard>} />
-        {/* Jobs: admin, dispatcher, vendor */}
+        {/* Jobs: admin, dispatcher only */}
         <Route path="/jobs" element={<RoleGuard checkFn={canAccessJobs}><Jobs /></RoleGuard>} />
         <Route path="/jobs/:id" element={<RoleGuard checkFn={canAccessJobs}><JobDetail /></RoleGuard>} />
         {/* Any authenticated user */}

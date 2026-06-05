@@ -69,7 +69,7 @@ export function canAccessInviteUsers(userOrRole) {
   return isAdmin(userOrRole);
 }
 
-/** Jobs page: internal users only (admin, dispatcher, legacy manager via normalization) */
+/** Jobs page: admin and dispatcher only (legacy manager normalizes to dispatcher) */
 export function canAccessJobs(userOrRole) {
   return isInternal(userOrRole);
 }
