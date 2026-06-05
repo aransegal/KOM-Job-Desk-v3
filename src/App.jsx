@@ -23,7 +23,20 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import AccessDenied from './components/AccessDenied';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { canAccessAdminOps, canAccessVendorPortal, canAccessInviteUsers, canAccessJobs } from '@/lib/permissions';
+import { canAccessAdminOps, canAccessVendorPortal, canAccessInviteUsers, canAccessJobs, isInternal, isVendor } from '@/lib/permissions';
+
+/** Redirects to the correct landing page based on the user's role */
+function RootRedirect() {
+  const { data: user, isLoading } = useCurrentUser();
+  if (isLoading) return (
+    <div className="fixed inset-0 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+    </div>
+  );
+  if (isInternal(user)) return <Dashboard />;
+  if (isVendor(user)) return <Navigate to="/vendor-portal" replace />;
+  return <AccessDenied />;
+}
 
 /** Renders children if checkFn(user) is true, otherwise shows AccessDenied */
 function RoleGuard({ checkFn, children }) {
@@ -65,7 +78,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route element={<Layout />}>
         {/* Admin + Dispatcher only */}
-        <Route path="/" element={<RoleGuard checkFn={canAccessAdminOps}><Dashboard /></RoleGuard>} />
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/schedule" element={<RoleGuard checkFn={canAccessAdminOps}><Schedule /></RoleGuard>} />
         <Route path="/customers" element={<RoleGuard checkFn={canAccessAdminOps}><Customers /></RoleGuard>} />
         <Route path="/customers/:id" element={<RoleGuard checkFn={canAccessAdminOps}><CustomerDetail /></RoleGuard>} />
