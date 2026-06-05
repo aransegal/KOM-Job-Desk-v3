@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/StatusBadge';
 import { ArrowLeft, Phone, Mail, HardHat, Calendar, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
+import WorkersSection from '@/components/WorkersSection';
 
 const CATEGORY_COLORS = {
   'Construction Work': 'bg-orange-100 text-orange-700',
@@ -82,8 +83,10 @@ export default function VendorDetail() {
           {vendor.notes && <p className="text-xs text-muted-foreground border-t border-border pt-3">{vendor.notes}</p>}
         </div>
 
-        {/* Job history */}
-        <div className="md:col-span-2 bg-white rounded-xl border border-border shadow-sm p-6">
+        {/* Workers + Job history */}
+        <div className="md:col-span-2 space-y-4">
+        <WorkersSection vendorId={id} />
+        <div className="bg-white rounded-xl border border-border shadow-sm p-6">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2"><Briefcase className="h-4 w-4 text-primary" />Job History ({jobs.length})</h3>
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {jobs.length === 0 && <p className="text-muted-foreground text-sm text-center py-8">No jobs assigned yet.</p>}
@@ -106,6 +109,7 @@ export default function VendorDetail() {
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>
