@@ -10,6 +10,7 @@ import StatusBadge from '@/components/StatusBadge';
 import { ArrowLeft, MapPin, Calendar, Clock, Camera, CheckCircle2, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Vendor job check-in and completion page
 export default function VendorJobAction() {
   const { id } = useParams();
   const navigate = useNavigate();

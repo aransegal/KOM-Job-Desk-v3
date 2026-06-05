@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Vendor profile is not linked to this user.' }, { status: 403 });
     }
 
-    // Load only this vendor's jobs
+    // Load only this vendor's assigned jobs
     const allJobs = await base44.asServiceRole.entities.Job.filter({ vendor_id: vendor.id });
 
     // Filter by week if provided

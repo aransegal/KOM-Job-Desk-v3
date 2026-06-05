@@ -10,7 +10,7 @@ export function useCurrentUser() {
 }
 
 // Read-only: resolves the current user's linked vendor by user_id only.
-// No email fallback, no write operations. Vendor linking is an admin responsibility.
+// No email fallback, no write operations. Vendor linking is an admin-only responsibility.
 export function useCurrentVendor(userId) {
   return useQuery({
     queryKey: ['myVendor', userId],

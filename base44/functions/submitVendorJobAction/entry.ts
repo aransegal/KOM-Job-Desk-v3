@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// Allowed vendor-facing job actions
 const ALLOWED_ACTIONS = [
   'approve_job',
   'disapprove_job',

@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, CheckCircle2, XCircle, Check, Zap, MapPin, C
 import { toast } from 'sonner';
 import { addDays, startOfWeek, format } from 'date-fns';
 
+// Days of the week
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function VendorPortal() {
