@@ -24,7 +24,6 @@ const DISPATCHER_NAV = [
 
 const VENDOR_NAV = [
   { path: '/vendor-portal', label: 'My Schedule', icon: Calendar },
-  { path: '/jobs', label: 'My Jobs', icon: Briefcase },
 ];
 
 function getNavItems(user) {

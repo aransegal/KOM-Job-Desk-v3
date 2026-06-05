@@ -69,8 +69,7 @@ export function canAccessInviteUsers(userOrRole) {
   return isAdmin(userOrRole);
 }
 
-/** Jobs page: admin, dispatcher, vendor (broad access for this patch) */
+/** Jobs page: internal users only (admin, dispatcher, legacy manager via normalization) */
 export function canAccessJobs(userOrRole) {
-  const r = getRole(userOrRole);
-  return r === 'admin' || r === 'dispatcher' || r === 'vendor';
+  return isInternal(userOrRole);
 }
