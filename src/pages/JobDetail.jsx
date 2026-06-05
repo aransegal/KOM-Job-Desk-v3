@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/StatusBadge';
-import { ArrowLeft, Calendar, Clock, User, MapPin, Zap, Camera, FileText } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, MapPin, Zap, Camera, FileText, HardHat } from 'lucide-react';
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -19,9 +19,17 @@ export default function JobDetail() {
 
   const { data: vendors = [] } = useQuery({ queryKey: ['vendors'], queryFn: () => base44.entities.Vendor.list() });
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
+  const { data: allAssignments = [] } = useQuery({ queryKey: ['jobAssignments'], queryFn: () => base44.entities.JobAssignment.list() });
+  const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.list() });
+  const { data: allScheduleItems = [] } = useQuery({ queryKey: ['scheduleItems'], queryFn: () => base44.entities.ScheduleItem.list() });
 
   const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]));
   const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
+  const workerMap = Object.fromEntries(allWorkers.map(w => [w.id, w]));
+
+  const assignment = allAssignments.find(a => a.job_id === id);
+  const scheduleItem = allScheduleItems.find(s => s.job_id === id);
+  const assignedWorker = assignment?.worker_id ? workerMap[assignment.worker_id] : null;
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Job.update(id, data),
@@ -173,6 +181,53 @@ export default function JobDetail() {
               <p className="text-sm text-foreground whitespace-pre-wrap">{job.completion_notes}</p>
             </div>
           )}
+
+          {/* Assignment */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-6">
+            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+              <HardHat className="h-4 w-4 text-primary" />Assignment
+            </h3>
+            {!assignment ? (
+              <p className="text-sm text-muted-foreground">No assignment record found.</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {vendor && <div><span className="text-muted-foreground">Vendor: </span><span className="font-medium">{vendor.name}</span></div>}
+                <div>
+                  <span className="text-muted-foreground">Worker: </span>
+                  <span className="font-medium">{assignedWorker ? assignedWorker.name : 'No worker assigned'}</span>
+                </div>
+                {assignedWorker?.email && <div><span className="text-muted-foreground">Email: </span>{assignedWorker.email}</div>}
+                {assignedWorker?.phone && <div><span className="text-muted-foreground">Phone: </span>{assignedWorker.phone}</div>}
+                <div>
+                  <span className="text-muted-foreground">Status: </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 capitalize">{assignment.assignment_status}</span>
+                </div>
+                {assignment.assigned_at && <div><span className="text-muted-foreground">Assigned at: </span>{new Date(assignment.assigned_at).toLocaleString()}</div>}
+              </div>
+            )}
+          </div>
+
+          {/* Schedule Item */}
+          <div className="bg-white rounded-xl border border-border shadow-sm p-6">
+            <h3 className="font-semibold text-foreground flex items-center gap-2 mb-4">
+              <Calendar className="h-4 w-4 text-primary" />Schedule Item
+            </h3>
+            {!scheduleItem ? (
+              <p className="text-sm text-muted-foreground">No schedule item record found.</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div><span className="text-muted-foreground">Date: </span><span className="font-medium">{scheduleItem.scheduled_date}</span></div>
+                {scheduleItem.start_time && <div><span className="text-muted-foreground">Start time: </span>{scheduleItem.start_time}</div>}
+                {scheduleItem.end_time && <div><span className="text-muted-foreground">End time: </span>{scheduleItem.end_time}</div>}
+                {scheduleItem.time_window && <div><span className="text-muted-foreground">Time window: </span>{scheduleItem.time_window}</div>}
+                {scheduleItem.week_start_date && <div><span className="text-muted-foreground">Week start: </span>{scheduleItem.week_start_date}</div>}
+                <div>
+                  <span className="text-muted-foreground">Status: </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 capitalize">{scheduleItem.schedule_status}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

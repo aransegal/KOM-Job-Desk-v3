@@ -213,7 +213,7 @@ export default function Schedule() {
                     >
                       <p className="font-semibold truncate leading-tight">{job.title}</p>
                       {vendor && <p className="opacity-80 truncate mt-0.5">👷 {vendor.name}</p>}
-                      {workerForJob && <p className="opacity-80 truncate mt-0.5">🧑‍🔧 {workerForJob.name}</p>}
+                      <p className="opacity-80 truncate mt-0.5">🧑‍🔧 {workerForJob ? workerForJob.name : 'No worker assigned'}</p>
                       {job.scheduled_time && <p className="opacity-70 mt-0.5">🕐 {job.scheduled_time}</p>}
                     </div>
                   );

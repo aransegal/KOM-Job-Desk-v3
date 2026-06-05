@@ -58,9 +58,20 @@ export default function Jobs() {
   const { data: vendors = [] } = useQuery({ queryKey: ['vendors'], queryFn: () => base44.entities.Vendor.list() });
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
   const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.list() });
+  const { data: allAssignments = [] } = useQuery({ queryKey: ['jobAssignments'], queryFn: () => base44.entities.JobAssignment.list() });
 
   const vendorMap = Object.fromEntries(vendors.map(v => [v.id, v]));
   const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
+  const workerMap = Object.fromEntries(allWorkers.map(w => [w.id, w]));
+
+  // job_id → worker display name
+  const jobWorkerLabel = Object.fromEntries(
+    allAssignments.map(a => {
+      if (!a.worker_id) return [a.job_id, 'Unassigned'];
+      const w = workerMap[a.worker_id];
+      return [a.job_id, w ? w.name : 'Unknown worker'];
+    })
+  );
 
   // Active workers for the vendor currently selected in the dialog
   const activeWorkersForVendor = allWorkers.filter(
@@ -246,6 +257,7 @@ export default function Jobs() {
                 <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden md:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('customer')}><span className="flex items-center gap-1">Customer <SortIcon col="customer" /></span></th>
                 <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden lg:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('vendor')}><span className="flex items-center gap-1">Vendor <SortIcon col="vendor" /></span></th>
                 <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden sm:table-cell cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('date')}><span className="flex items-center gap-1">Date <SortIcon col="date" /></span></th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden lg:table-cell">Worker</th>
                 <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 cursor-pointer select-none hover:text-foreground" onClick={() => handleSort('status')}><span className="flex items-center gap-1">Status <SortIcon col="status" /></span></th>
               </tr>
             </thead>
@@ -266,6 +278,9 @@ export default function Jobs() {
                   <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">{vendorMap[job.vendor_id]?.name || '—'}</td>
                   <td className="px-4 py-3 hidden sm:table-cell text-sm text-muted-foreground">
                     <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{job.scheduled_date}</span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
+                    {jobWorkerLabel[job.id] ?? 'Unassigned'}
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={job.status} /></td>
                 </tr>
