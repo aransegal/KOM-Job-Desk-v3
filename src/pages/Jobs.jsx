@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import StatusBadge from '@/components/StatusBadge';
-import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Search, Calendar, Zap, Filter, ChevronUp, ChevronDown, SlidersHorizontal, X, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EMPTY_FORM = { title: '', description: '', customer_id: '', vendor_id: '', worker_id: '', scheduled_date: '', scheduled_time: '', is_on_demand: false, week_start_date: '' };
@@ -37,6 +37,9 @@ export default function Jobs() {
   const [vendorFilter, setVendorFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('');
   const [sortDir, setSortDir] = useState('asc');
+  const [repairDialog, setRepairDialog] = useState(false);
+  const [dryRunResult, setDryRunResult] = useState(null);
+  const [repairRunning, setRepairRunning] = useState(false);
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -49,6 +52,36 @@ export default function Jobs() {
   };
 
   const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+  const isAdmin = user?.role === 'admin';
+
+  const handleRepairDryRun = async () => {
+    setRepairRunning(true);
+    try {
+      const res = await base44.functions.invoke('backfillJobSchedulingSpine', { dryRun: true });
+      setDryRunResult(res.data);
+      setRepairDialog(true);
+    } catch (err) {
+      toast.error(`Dry run failed: ${err.message}`);
+    } finally {
+      setRepairRunning(false);
+    }
+  };
+
+  const handleRepairConfirm = async () => {
+    setRepairRunning(true);
+    try {
+      const res = await base44.functions.invoke('backfillJobSchedulingSpine', { dryRun: false });
+      const d = res.data;
+      toast.success(`Backfill complete — ${d.assignmentsCreated} assignments, ${d.scheduleItemsCreated} schedule items created.`);
+      queryClient.invalidateQueries({ queryKey: ['jobAssignments'] });
+      setRepairDialog(false);
+      setDryRunResult(null);
+    } catch (err) {
+      toast.error(`Backfill failed: ${err.message}`);
+    } finally {
+      setRepairRunning(false);
+    }
+  };
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ['jobs'],
@@ -168,11 +201,19 @@ export default function Jobs() {
           <h1 className="text-2xl font-semibold text-foreground">Jobs</h1>
           <p className="text-muted-foreground text-sm mt-1">{filtered.length} jobs</p>
         </div>
-        {isAdminOrManager && (
-          <Button onClick={() => { setForm(EMPTY_FORM); setDialog(true); }} style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }} className="text-white border-0">
-            <Plus className="h-4 w-4 mr-2" /> New Job
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={handleRepairDryRun} disabled={repairRunning} className="text-muted-foreground gap-1.5">
+              <Wrench className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Repair Scheduling Records</span>
+            </Button>
+          )}
+          {isAdminOrManager && (
+            <Button onClick={() => { setForm(EMPTY_FORM); setDialog(true); }} style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }} className="text-white border-0">
+              <Plus className="h-4 w-4 mr-2" /> New Job
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-3 flex-wrap">
@@ -290,6 +331,34 @@ export default function Jobs() {
           {filtered.length === 0 && <p className="text-center text-muted-foreground py-12 text-sm">No jobs found.</p>}
         </div>
       )}
+
+      {/* Repair / Backfill confirmation dialog */}
+      <Dialog open={repairDialog} onOpenChange={() => { setRepairDialog(false); setDryRunResult(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Wrench className="h-4 w-4" />Repair Scheduling Records</DialogTitle></DialogHeader>
+          {dryRunResult && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">Dry-run results — no records have been written yet.</p>
+              <div className="bg-secondary/40 rounded-lg p-3 space-y-1.5">
+                <div className="flex justify-between"><span className="text-muted-foreground">Jobs scanned</span><span className="font-medium">{dryRunResult.jobsScanned}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Assignments to create</span><span className="font-medium text-primary">{dryRunResult.assignmentsWouldCreate}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Schedule items to create</span><span className="font-medium text-primary">{dryRunResult.scheduleItemsWouldCreate}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Already had assignment</span><span className="font-medium">{dryRunResult.alreadyHadAssignment}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Already had schedule item</span><span className="font-medium">{dryRunResult.alreadyHadScheduleItem}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Skipped (no vendor)</span><span className="font-medium text-destructive">{dryRunResult.skippedNoVendor}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Skipped (no date)</span><span className="font-medium">{dryRunResult.skippedNoScheduledDate}</span></div>
+              </div>
+              <p className="text-xs text-muted-foreground">Confirm to apply these changes. Running again after backfill will create 0 new records.</p>
+              <div className="flex gap-2 justify-end pt-1">
+                <Button variant="outline" size="sm" onClick={() => { setRepairDialog(false); setDryRunResult(null); }}>Cancel</Button>
+                <Button size="sm" onClick={handleRepairConfirm} disabled={repairRunning} style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }} className="text-white border-0">
+                  {repairRunning ? 'Running…' : 'Apply Backfill'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialog} onOpenChange={() => setDialog(false)}>
         <DialogContent className="max-w-md">
