@@ -22,20 +22,19 @@ export default function VendorJobAction() {
   const beforeRef = useRef();
   const afterRef = useRef();
 
-  const { data: job, isLoading } = useQuery({
-    queryKey: ['job', id],
-    queryFn: () => base44.entities.Job.get(id),
+  const { data: pageData, isLoading, error } = useQuery({
+    queryKey: ['vendorJobAction', id, user?.id],
+    queryFn: () => base44.functions.invoke('getVendorJobActionData', { job_id: id }),
+    enabled: !!id && !!user?.id,
+    select: (res) => res.data,
   });
 
-  const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
-  const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
+  const job = pageData?.job;
+  const customer = pageData?.customer;
 
-  const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Job.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['job', id] });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    },
+  const actionMutation = useMutation({
+    mutationFn: (payload) => base44.functions.invoke('submitVendorJobAction', payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['vendorJobAction', id, user?.id] }),
   });
 
   const uploadPhotos = async (files) => {
@@ -50,10 +49,10 @@ export default function VendorJobAction() {
   const handleCheckIn = async () => {
     setUploading(true);
     const urls = await uploadPhotos(beforePhotos);
-    await updateMutation.mutateAsync({
-      status: 'in_progress',
-      started_at: new Date().toISOString(),
-      before_photos: [...(job.before_photos || []), ...urls],
+    await actionMutation.mutateAsync({
+      action: 'check_in',
+      job_id: id,
+      before_photo_urls: urls,
     });
     setUploading(false);
     setBeforePhotos([]);
@@ -64,10 +63,10 @@ export default function VendorJobAction() {
     if (!completionNotes.trim()) { toast.error('Please write a completion description.'); return; }
     setUploading(true);
     const urls = await uploadPhotos(afterPhotos);
-    await updateMutation.mutateAsync({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      after_photos: [...(job.after_photos || []), ...urls],
+    await actionMutation.mutateAsync({
+      action: 'complete_job',
+      job_id: id,
+      after_photo_urls: urls,
       completion_notes: completionNotes,
     });
     setUploading(false);
@@ -82,9 +81,20 @@ export default function VendorJobAction() {
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>;
-  if (!job) return <div className="text-center py-12 text-muted-foreground">Job not found.</div>;
 
-  const customer = customerMap[job.customer_id];
+  // 403 from server = wrong vendor
+  if (error || (!isLoading && !job)) {
+    const is403 = error?.response?.status === 403 || error?.message?.includes('403');
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-10 text-center max-w-md">
+          <h2 className="text-lg font-semibold text-foreground mb-2">{is403 ? 'Access Denied' : 'Job Not Found'}</h2>
+          <p className="text-muted-foreground text-sm">{is403 ? 'This job does not belong to your vendor account.' : 'The requested job could not be found.'}</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/vendor-portal')}>Back to Schedule</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg mx-auto space-y-6">

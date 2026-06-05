@@ -9,23 +9,14 @@ export function useCurrentUser() {
   });
 }
 
+// Read-only: resolves the current user's linked vendor by user_id only.
+// No email fallback, no write operations. Vendor linking is an admin responsibility.
 export function useCurrentVendor(userId) {
   return useQuery({
     queryKey: ['myVendor', userId],
     queryFn: async () => {
-      // First try to find by linked user_id
-      const byUserId = await base44.entities.Vendor.filter({ user_id: userId });
-      if (byUserId[0]) return byUserId[0];
-
-      // Fallback: match by email and auto-link
-      const user = await base44.auth.me();
-      if (!user?.email) return null;
-      const byEmail = await base44.entities.Vendor.filter({ email: user.email });
-      if (byEmail[0]) {
-        await base44.entities.Vendor.update(byEmail[0].id, { user_id: userId });
-        return { ...byEmail[0], user_id: userId };
-      }
-      return null;
+      const results = await base44.entities.Vendor.filter({ user_id: userId });
+      return results[0] ?? null;
     },
     enabled: !!userId,
   });

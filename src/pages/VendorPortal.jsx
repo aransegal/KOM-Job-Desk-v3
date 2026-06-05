@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { useCurrentUser, useCurrentVendor } from '@/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +18,6 @@ export default function VendorPortal() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
-  const { data: myVendor, isLoading: loadingVendor } = useCurrentVendor(user?.id);
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [disapproveDialog, setDisapproveDialog] = useState(null);
   const [disapproveReason, setDisapproveReason] = useState('');
@@ -27,61 +26,71 @@ export default function VendorPortal() {
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const weekEndStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
 
-  const { data: myJobs = [] } = useQuery({
-    queryKey: ['vendorJobs', myVendor?.id],
-    queryFn: () => base44.entities.Job.filter({ vendor_id: myVendor.id }, '-scheduled_date', 100),
-    enabled: !!myVendor?.id,
+  const { data: portalData, isLoading, error } = useQuery({
+    queryKey: ['vendorPortal', user?.id, weekStartStr],
+    queryFn: () => base44.functions.invoke('getVendorPortalData', { weekStart: weekStartStr, weekEnd: weekEndStr }),
+    enabled: !!user?.id,
+    select: (res) => res.data,
   });
 
-  const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
-  const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
+  const myVendor = portalData?.vendor;
+  const allJobs = portalData?.jobs ?? [];
+  const customersById = portalData?.customersById ?? {};
+  const schedules = portalData?.schedules ?? [];
 
-  const { data: schedules = [] } = useQuery({
-    queryKey: ['schedules'],
-    queryFn: () => base44.entities.WeeklySchedule.list(),
-  });
-
-  const weekJobs = myJobs.filter(j => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
-  const onDemandPending = myJobs.filter(j => j.is_on_demand && j.status === 'scheduled');
-  const currentSchedule = schedules.find(s => s.vendor_id === myVendor?.id && s.week_start_date === weekStartStr);
+  const weekJobs = allJobs.filter(j => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
+  const onDemandPending = allJobs.filter(j => j.is_on_demand && j.status === 'scheduled');
+  const currentSchedule = schedules.find(s => s.week_start_date === weekStartStr);
   const canApprove = currentSchedule?.status === 'sent' || weekJobs.some(j => j.status === 'scheduled');
 
-  const updateJobMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Job.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendorJobs', myVendor?.id] });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-    },
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['vendorPortal', user?.id] });
+
+  const actionMutation = useMutation({
+    mutationFn: (payload) => base44.functions.invoke('submitVendorJobAction', payload),
+    onSuccess: () => invalidate(),
   });
 
   const approveAllMutation = useMutation({
-    mutationFn: async () => {
-      const toApprove = weekJobs.filter(j => j.status === 'scheduled');
-      await Promise.all(toApprove.map(j => base44.entities.Job.update(j.id, { status: 'approved' })));
-      if (currentSchedule) await base44.entities.WeeklySchedule.update(currentSchedule.id, { status: 'approved' });
-    },
+    mutationFn: () => base44.functions.invoke('submitVendorJobAction', {
+      action: 'approve_all_week_jobs',
+      week_start_date: weekStartStr,
+    }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vendorJobs', myVendor?.id] });
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      invalidate();
       toast.success('All jobs approved!');
     },
   });
 
   const handleDisapprove = () => {
     if (!disapproveDialog) return;
-    updateJobMutation.mutate({ id: disapproveDialog.id, data: { status: 'disapproved', disapproval_reason: disapproveReason } });
+    actionMutation.mutate({ action: 'disapprove_job', job_id: disapproveDialog.id, disapproval_reason: disapproveReason });
     setDisapproveDialog(null);
     setDisapproveReason('');
     toast.info('Job disapproved');
   };
 
   const handleOnDemand = (job, accept) => {
-    updateJobMutation.mutate({ id: job.id, data: { status: accept ? 'approved' : 'declined' } });
+    actionMutation.mutate({ action: accept ? 'accept_on_demand' : 'decline_on_demand', job_id: job.id });
     toast(accept ? 'Job accepted!' : 'Job declined', { icon: accept ? '✅' : '❌' });
   };
 
-  if (loadingVendor) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>;
+  if (isLoading) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-secondary border-t-primary rounded-full animate-spin" /></div>;
+
+  // 403 = vendor not linked
+  if (error || (portalData === undefined && !isLoading)) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-10 text-center max-w-md">
+          <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
+            <Calendar className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-lg font-semibold text-foreground mb-2">Account not linked</h2>
+          <p className="text-muted-foreground text-sm">Your account is not linked to a vendor profile. Please contact your administrator.</p>
+          <p className="text-xs text-muted-foreground mt-2">Your User ID: <code className="bg-secondary px-1.5 py-0.5 rounded text-xs">{user?.id}</code></p>
+        </div>
+      </div>
+    );
+  }
 
   if (!myVendor) return (
     <div className="flex items-center justify-center h-[60vh]">
@@ -125,7 +134,7 @@ export default function VendorPortal() {
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <Calendar className="h-3 w-3" />{job.scheduled_date} {job.scheduled_time && `at ${job.scheduled_time}`}
                   </p>
-                  {customerMap[job.customer_id] && <p className="text-xs text-muted-foreground">{customerMap[job.customer_id].name}</p>}
+                  {customersById[job.customer_id] && <p className="text-xs text-muted-foreground">{customersById[job.customer_id].name}</p>}
                   {job.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{job.description}</p>}
                 </div>
                 <div className="flex gap-2 ml-3">
@@ -182,7 +191,7 @@ export default function VendorPortal() {
                     style={{ borderColor: job.status === 'approved' ? '#3CB371' : job.status === 'disapproved' ? '#F97316' : '#D1FAE5' }}>
                     <div className="p-2 text-xs" style={{ background: job.status === 'approved' ? '#f0fdf4' : job.status === 'disapproved' ? '#fff7ed' : '#f9fafb' }}>
                       <p className="font-medium text-foreground truncate">{job.title}</p>
-                      {customerMap[job.customer_id] && <p className="text-muted-foreground truncate">{customerMap[job.customer_id].name}</p>}
+                      {customersById[job.customer_id] && <p className="text-muted-foreground truncate">{customersById[job.customer_id].name}</p>}
                       {job.scheduled_time && <p className="text-muted-foreground flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{job.scheduled_time}</p>}
                       <div className="flex gap-1 mt-1.5">
                         {(job.status === 'approved' || job.status === 'in_progress') && (
@@ -192,10 +201,12 @@ export default function VendorPortal() {
                         )}
                         {job.status === 'scheduled' && (
                           <>
-                            <button className="text-green-600 hover:text-green-700" title="Approve" onClick={() => updateJobMutation.mutate({ id: job.id, data: { status: 'approved' } })}>
+                            <button className="text-green-600 hover:text-green-700" title="Approve"
+                              onClick={() => actionMutation.mutate({ action: 'approve_job', job_id: job.id })}>
                               <CheckCircle2 className="h-4 w-4" />
                             </button>
-                            <button className="text-orange-500 hover:text-orange-600" title="Disapprove" onClick={() => setDisapproveDialog(job)}>
+                            <button className="text-orange-500 hover:text-orange-600" title="Disapprove"
+                              onClick={() => setDisapproveDialog(job)}>
                               <XCircle className="h-4 w-4" />
                             </button>
                           </>
