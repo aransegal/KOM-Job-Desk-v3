@@ -28,6 +28,7 @@ const EMPTY_FORM = {
   worker_id: '',
   scheduled_date: '',
   scheduled_time: '',
+  is_on_demand: false,
 };
 
 export default function Schedule() {
@@ -122,10 +123,10 @@ export default function Schedule() {
 
       return job;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobAssignments'] });
-      toast.success('Job added to schedule');
+      toast.success(variables.is_on_demand ? 'On-demand job created and sent to vendor portal.' : 'Job added to schedule.');
       closeDialog();
     },
   });
@@ -302,6 +303,11 @@ export default function Schedule() {
                 <Label>Time</Label>
                 <Input type="time" value={form.scheduled_time} onChange={(e) => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="sched_on_demand" checked={form.is_on_demand} onChange={e => setForm(f => ({ ...f, is_on_demand: e.target.checked }))} className="w-4 h-4 accent-primary" />
+              <Label htmlFor="sched_on_demand">On-Demand Request</Label>
             </div>
 
             <div className="flex gap-2 justify-end">
