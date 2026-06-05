@@ -20,19 +20,29 @@ function getWeekStart(date) {
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  customer_id: '',
+  vendor_id: '',
+  worker_id: '',
+  scheduled_date: '',
+  scheduled_time: '',
+};
+
 export default function Schedule() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: currentUser } = useCurrentUser();
   const [weekStart, setWeekStart] = useState(getWeekStart(new Date()));
   const [dialog, setDialog] = useState(false);
-  const [selectedWorkerId, setSelectedWorkerId] = useState('');
-  const [form, setForm] = useState({ title: '', description: '', customer_id: '', vendor_id: '', scheduled_date: '', scheduled_time: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekStartStr = format(weekStart, 'yyyy-MM-dd');
   const weekEndStr = format(addDays(weekStart, 6), 'yyyy-MM-dd');
 
+  // --- Data fetching ---
   const { data: vendors = [] } = useQuery({ queryKey: ['vendors'], queryFn: () => base44.entities.Vendor.list() });
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() });
   const { data: jobs = [] } = useQuery({ queryKey: ['jobs'], queryFn: () => base44.entities.Job.list('-scheduled_date', 200) });
@@ -40,21 +50,42 @@ export default function Schedule() {
   const { data: allWorkers = [] } = useQuery({ queryKey: ['workers'], queryFn: () => base44.entities.Worker.list() });
   const { data: assignments = [] } = useQuery({ queryKey: ['jobAssignments'], queryFn: () => base44.entities.JobAssignment.list() });
 
-  const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
+  // --- Derived maps ---
+  const vendorMap = Object.fromEntries(vendors.map((v) => [v.id, v]));
   const workerMap = Object.fromEntries(allWorkers.map((w) => [w.id, w]));
-  // Map job_id -> worker_id via assignments (for display on cards)
   const jobWorkerMap = Object.fromEntries(assignments.filter(a => a.worker_id).map(a => [a.job_id, a.worker_id]));
+  const activeVendors = vendors.filter((v) => v.status === 'active');
+
+  // Workers for the currently selected vendor (active only)
+  const activeWorkersForVendor = allWorkers.filter(
+    w => w.vendor_id === form.vendor_id && w.status === 'active'
+  );
 
   const weekJobs = jobs.filter((j) => j.scheduled_date >= weekStartStr && j.scheduled_date <= weekEndStr && !j.is_on_demand);
 
-  // Active workers filtered to currently selected vendor in dialog (client-side filter for both status and vendor)
-  const vendorActiveWorkers = allWorkers.filter(w => w.vendor_id === form.vendor_id && w.status === 'active');
-  const resolvedWorkerId = (selectedWorkerId && selectedWorkerId !== '__none__') ? selectedWorkerId : null;
+  // --- Handlers ---
+  const handleVendorChange = (v) => {
+    setForm(f => ({ ...f, vendor_id: v, worker_id: '' }));
+  };
 
+  const openDialog = () => {
+    setForm({ ...EMPTY_FORM, scheduled_date: weekStartStr });
+    setDialog(true);
+  };
+
+  const closeDialog = () => {
+    setDialog(false);
+    setForm(EMPTY_FORM);
+  };
+
+  // --- Mutations ---
   const createJobMutation = useMutation({
     mutationFn: async (data) => {
-      // 1. Create the Job
-      const job = await base44.entities.Job.create(data);
+      const workerIdToSave = data.worker_id || null;
+
+      // 1. Create Job
+      const { worker_id: _w, ...jobData } = data;
+      const job = await base44.entities.Job.create(jobData);
 
       // 2. Create JobAssignment
       let assignment;
@@ -62,7 +93,7 @@ export default function Schedule() {
         assignment = await base44.entities.JobAssignment.create({
           job_id: job.id,
           vendor_id: data.vendor_id,
-          worker_id: resolvedWorkerId,
+          worker_id: workerIdToSave,
           assigned_by_user_id: currentUser?.id || null,
           assignment_status: 'assigned',
           assigned_at: new Date().toISOString(),
@@ -78,7 +109,7 @@ export default function Schedule() {
           job_id: job.id,
           assignment_id: assignment.id,
           vendor_id: data.vendor_id,
-          worker_id: resolvedWorkerId,
+          worker_id: workerIdToSave,
           scheduled_date: data.scheduled_date,
           start_time: data.scheduled_time || null,
           week_start_date: data.week_start_date,
@@ -95,8 +126,7 @@ export default function Schedule() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobAssignments'] });
       toast.success('Job added to schedule');
-      setDialog(false);
-      setSelectedWorkerId('');
+      closeDialog();
     },
   });
 
@@ -113,20 +143,15 @@ export default function Schedule() {
         }
       }
     },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ['schedules'] });toast.success(`Schedule sent to ${[...new Set(weekJobs.map((j) => j.vendor_id))].length} vendor(s)!`);}
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast.success(`Schedule sent to ${[...new Set(weekJobs.map((j) => j.vendor_id))].length} vendor(s)!`);
+    }
   });
-
-  const activeVendors = vendors.filter((v) => v.status === 'active');
-  const vendorMap = Object.fromEntries(vendors.map((v) => [v.id, v]));
 
   const handleAddJob = (e) => {
     e.preventDefault();
     createJobMutation.mutate({ ...form, week_start_date: weekStartStr });
-  };
-
-  const handleVendorChange = (v) => {
-    setForm(f => ({ ...f, vendor_id: v }));
-    setSelectedWorkerId(''); // reset worker when vendor changes
   };
 
   return (
@@ -146,8 +171,8 @@ export default function Schedule() {
             onClick={() => sendScheduleMutation.mutate()}
             disabled={weekJobs.length === 0 || sendScheduleMutation.isPending}
             style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
-            className="text-white border-0 ml-2">
-            
+            className="text-white border-0 ml-2"
+          >
             <Send className="h-4 w-4 mr-2" />Send Schedule
           </Button>
         </div>
@@ -155,7 +180,6 @@ export default function Schedule() {
 
       {/* Day-based calendar grid */}
       <div className="bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        {/* Header: day columns */}
         <div className="grid grid-cols-7 border-b border-border">
           {weekDays.map((day, i) => {
             const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
@@ -164,12 +188,11 @@ export default function Schedule() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{DAYS[i]}</p>
                 <p className={`text-lg font-bold mt-0.5 ${isToday ? 'text-primary' : 'text-foreground'}`}>{format(day, 'd')}</p>
                 <p className="text-xs text-muted-foreground">{format(day, 'MMM')}</p>
-              </div>);
-
+              </div>
+            );
           })}
         </div>
 
-        {/* Job cells per day */}
         <div className="grid grid-cols-7 min-h-64">
           {weekDays.map((day, i) => {
             const dayStr = format(day, 'yyyy-MM-dd');
@@ -179,90 +202,118 @@ export default function Schedule() {
               <div key={i} className={`border-r border-border last:border-r-0 p-2 space-y-1.5 ${isToday ? 'bg-primary/5' : ''}`}>
                 {dayJobs.map((job) => {
                   const vendor = vendorMap[job.vendor_id];
+                  const workerForJob = jobWorkerMap[job.id] ? workerMap[jobWorkerMap[job.id]] : null;
                   return (
                     <div
                       key={job.id}
                       className="p-2 rounded-lg cursor-pointer hover:opacity-90 transition-opacity text-white text-xs"
                       style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }}
-                      onClick={() => navigate(`/jobs/${job.id}`)}>
-                      
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                    >
                       <p className="font-semibold truncate leading-tight">{job.title}</p>
                       {vendor && <p className="opacity-80 truncate mt-0.5">👷 {vendor.name}</p>}
-                      {jobWorkerMap[job.id] && workerMap[jobWorkerMap[job.id]] && (
-                        <p className="opacity-80 truncate mt-0.5">🧑‍🔧 {workerMap[jobWorkerMap[job.id]].name}</p>
-                      )}
+                      {workerForJob && <p className="opacity-80 truncate mt-0.5">🧑‍🔧 {workerForJob.name}</p>}
                       {job.scheduled_time && <p className="opacity-70 mt-0.5">🕐 {job.scheduled_time}</p>}
-                    </div>);
-
+                    </div>
+                  );
                 })}
-                {dayJobs.length === 0 &&
-                <p className="text-xs text-muted-foreground text-center pt-4 opacity-50">—</p>
-                }
-              </div>);
-
+                {dayJobs.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center pt-4 opacity-50">—</p>
+                )}
+              </div>
+            );
           })}
         </div>
       </div>
 
       {/* Add job button */}
       <div className="flex justify-end">
-        <Button variant="outline" onClick={() => {setForm((f) => ({ ...f, scheduled_date: weekStartStr }));setDialog(true);}}>
+        <Button variant="outline" onClick={openDialog}>
           <Plus className="h-4 w-4 mr-2" />Add Job
         </Button>
       </div>
 
-      <Dialog open={dialog} onOpenChange={() => { setDialog(false); setSelectedWorkerId(''); setForm(f => ({ ...f, vendor_id: '', customer_id: '' })); }}>
+      {/* Add Job Dialog */}
+      <Dialog open={dialog} onOpenChange={closeDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Add Job to Schedule</DialogTitle></DialogHeader>
           <form onSubmit={handleAddJob} className="space-y-4">
-            <div><Label>Title *</Label><Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} /></div>
-            <div><Label>Customer *</Label>
-              <Select value={form.customer_id} onValueChange={(v) => setForm((f) => ({ ...f, customer_id: v }))}>
+
+            <div>
+              <Label>Title *</Label>
+              <Input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} required />
+            </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={2} />
+            </div>
+
+            <div>
+              <Label>Customer *</Label>
+              <Select value={form.customer_id || undefined} onValueChange={(v) => setForm(f => ({ ...f, customer_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-                <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
-            <div><Label>Vendor *</Label>
-              <Select value={form.vendor_id} onValueChange={handleVendorChange}>
+
+            <div>
+              <Label>Vendor *</Label>
+              <Select value={form.vendor_id || undefined} onValueChange={handleVendorChange}>
                 <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                <SelectContent>{activeVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {activeVendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
+
+            {/* Worker selector — shown only after vendor is selected */}
             {form.vendor_id && (
               <div>
                 <Label>Worker (optional)</Label>
-                <Select
-                  value={selectedWorkerId || undefined}
-                  onValueChange={(v) => setSelectedWorkerId(v === '__none__' ? '' : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      vendorActiveWorkers.length === 0
-                        ? 'No active workers for this vendor'
-                        : 'Select worker (optional)'
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— No worker —</SelectItem>
-                    {vendorActiveWorkers.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}{w.role ? ` · ${w.role}` : ''}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {activeWorkersForVendor.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-1 px-1">No active workers for this vendor.</p>
+                ) : (
+                  <Select
+                    value={form.worker_id || undefined}
+                    onValueChange={(v) => setForm(f => ({ ...f, worker_id: v }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select worker (optional)" /></SelectTrigger>
+                    <SelectContent>
+                      {activeWorkersForVendor.map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name}{w.role ? ` · ${w.role}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             )}
+
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Date *</Label><Input type="date" min={weekStartStr} max={weekEndStr} value={form.scheduled_date} onChange={(e) => setForm((f) => ({ ...f, scheduled_date: e.target.value }))} required /></div>
-              <div><Label>Time</Label><Input type="time" value={form.scheduled_time} onChange={(e) => setForm((f) => ({ ...f, scheduled_time: e.target.value }))} /></div>
+              <div>
+                <Label>Date *</Label>
+                <Input type="date" min={weekStartStr} max={weekEndStr} value={form.scheduled_date} onChange={(e) => setForm(f => ({ ...f, scheduled_date: e.target.value }))} required />
+              </div>
+              <div>
+                <Label>Time</Label>
+                <Input type="time" value={form.scheduled_time} onChange={(e) => setForm(f => ({ ...f, scheduled_time: e.target.value }))} />
+              </div>
             </div>
+
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={() => setDialog(false)}>Cancel</Button>
-              <Button type="submit" style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }} className="text-white border-0">Add Job</Button>
+              <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
+              <Button type="submit" disabled={createJobMutation.isPending} style={{ background: 'linear-gradient(135deg, #3CB371 0%, #1AA260 100%)' }} className="text-white border-0">
+                {createJobMutation.isPending ? 'Saving...' : 'Add Job'}
+              </Button>
             </div>
+
           </form>
         </DialogContent>
       </Dialog>
-    </div>);
-
+    </div>
+  );
 }
